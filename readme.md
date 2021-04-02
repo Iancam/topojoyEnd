@@ -1,4 +1,3 @@
-
 # TopoJoy
 
 ![hero](./image1.jpg)
@@ -9,26 +8,13 @@ I used [mapbox terrain-rgb](https://docs.mapbox.com/vector-tiles/reference/mapbo
 
 I used [geoJson](https://geojson.io/) to specify the area I wanted, and @mapbox/cover handled to handle the output.
 
-```js
-const downloadTile = (dir = "tiles", verbose = false) => ([x, y, zoom]) => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-  const file = `${dir}/${y}x${x}.png`;
-  console.log(x, y);
-  fs.existsSync(file)
-    ? verbose && console.log("cache hit for " + file)
-    : execSync(
-        `curl https://api.mapbox.com/v4/mapbox.terrain-rgb/${zoom}/${x}/${y}.pngraw?access_token=${process.env.MBX_TOKEN} --output ${file}`
-      );
-};
-```
+![](mbxExample.png)
 
 I covered a large area, so I had to stitch my images together. I ended up using `vips arrayjoin "1657x3158.png 1657x3159.png..." result.png --across 9` instead of `ImageMagick append`, because the later changed my pixel values.
 
-I turned the above code for downloading and stitching into a little command line tool which is available [here](https://github.com/Iancam/topoJoy).
+The above code for downloading and stitching is now a little command line tool which is available [here](https://github.com/Iancam/topoJoy).
 
 I also wanted to include a trail system in the map. Shapefiles seem to be lingua franca for this, and it's easy to see why: I had a trail network which was almost 126 mb as json, but as a Shapefile, it was only 33mb. [Mapshaper](https://mapshaper.org/) is a good tool to work with shapefiles, allowing you to simplify, convert and annotate them effectively.
-
-
 
 ## Processing The Topo Image
 
@@ -82,6 +68,4 @@ const slices = times(nSlices, (i) =>
 
 ![detail](detail.png)
 
-
-The final image was created using [p5.js](http://p5js.org). Tyler's [tutorial](https://tylerxhobbs.com/essays/2020/flow-fields) is probably a much better introduction to the primary curve technique. The only difference is that I sampled an image instead of a perlin noise distribution. 
-
+The final image was created using [p5.js](http://p5js.org). Though the process image code hasn't been put in a separate library, it is somewhat reusable. The rest of the code isn't terribly reusable (or well written) but I hope that it can serve as an example for other artists.
