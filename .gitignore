@@ -1,0 +1,9 @@
+.env
+node_modules
+leviathan*
+snowMesa*
+tiles
+data
+images
+cotrails.josn
+*Data.js
