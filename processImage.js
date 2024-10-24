@@ -2,7 +2,7 @@ const gpu = new GPU();
 const toHeights = gpu
   .createKernel(function hmap(data, width) {
     const { x, y } = this.thread;
-
+    // can't declare functions in the kernel, or I would refactor this
     const start = y * (width * 4) + x * 4;
     const [R, G, B, A] = [
       data[start],
@@ -28,7 +28,12 @@ const toHeights = gpu
   .setDynamicOutput(true);
 
 const slope = gpu
-  .createKernel(function (hArray, pixDist) {
+ /**
+  * Given a 2d height array and a meters per pixel, returns a
+  * height, slope and aspect angle in degrees
+  */
+
+  .createKernel(function (hArray, metersPerPixel) {
     const { x, y } = this.thread;
     const height = hArray[y][x];
 
@@ -36,7 +41,7 @@ const slope = gpu
     const eleS = hArray[y][x + 1];
     const eleE = hArray[y + 1][x];
     const eleW = hArray[y - 1][x];
-    const d = 3 * pixDist;
+    const d = 3 * metersPerPixel;
     const dzdx = (eleE - eleW) / d;
     const dzdy = (eleN - eleS) / d;
     const slope = Math.atan(Math.sqrt(dzdx ** 2 + dzdy ** 2)) * (180 / Math.PI);
@@ -48,14 +53,27 @@ const slope = gpu
   })
   .setDynamicOutput(true);
 
-function toHmap(image, pixDist) {
-  const x = toHeights.setOutput([image.width, image.height])(
+/**
+ * Given an image and a meters per pixel, returns a
+ * canvas of the same size as the image, where the color of each pixel
+ * is its aspect. The aspect is the direction of the slope with respect
+ * to the east, measured in degrees from 0 to 360. The color of each
+ * pixel is a shade of gray, with 0 degrees represented by black and
+ * 360 degrees by white.
+ * Used for debugging.
+ * @param {width, height, data} image - an image
+ * @param {number} metersPerPixel 
+ * @returns {undefined}
+ */
+function toHmap(image, metersPerPixel) {
+  
+  const heights = toHeights.setOutput([image.width, image.height])(
     image.data,
     image.width
   );
   const slopes = slope.setPipeline(true).setOutput([image.width, image.height])(
-    x,
-    pixDist
+    heights,
+    metersPerPixel
   );
   const render = gpu
     .createKernel(function (slArray) {
@@ -71,7 +89,22 @@ function toHmap(image, pixDist) {
   document.getElementsByTagName("body")[0].appendChild(render.canvas);
 }
 
-function processPixels(image, pixDist) {
+  /**
+   * Takes an image and pixel distance and returns a map of height, slope and
+   * aspect values for each pixel, as well as the minimum, maximum, and range of
+   * those values across the image.
+   * @param {width, height, data} image
+   * @param {number} metersPerPixel meters per pixel
+   * @returns {
+   *  min: number,
+   *  max:number,
+   *  magnitude: number,
+   *  pixels: number[],
+   *  width: number,
+   *  height: number
+   * } heightmap
+   */
+function processPixels(image, metersPerPixel) {
   const { width, height, data } = image;
   console.log(height, height / 4);
   const extrema_y = gpu
@@ -93,7 +126,7 @@ function processPixels(image, pixDist) {
     data.slice(i * step * width * 4, (i + 1) * step * width * nSlices)
   ).map((data) => {
     const htex = toHeights.setOutput([width, step])(data, width);
-    const pixels = slope.setOutput([width, step])(htex, pixDist);
+    const pixels = slope.setOutput([width, step])(htex, metersPerPixel);
     const extremay = extrema_y.setOutput([step])(htex, step);
     const extrema = extremay.reduce(([min, max], [mi, ma]) => {
       return [mi < min ? mi : min, ma > max ? ma : max];
