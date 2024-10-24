@@ -1,4 +1,11 @@
-const gpu = new GPU();
+function initGPU() {
+  try {
+    return new window.GPU.GPU();
+  } catch (e) {
+    return new GPU();
+  }
+}
+const gpu = initGPU();
 const toHeights = gpu
   .createKernel(function hmap(data, width) {
     const { x, y } = this.thread;
@@ -28,10 +35,10 @@ const toHeights = gpu
   .setDynamicOutput(true);
 
 const slope = gpu
- /**
-  * Given a 2d height array and a meters per pixel, returns a
-  * height, slope and aspect angle in degrees
-  */
+  /**
+   * Given a 2d height array and a meters per pixel, returns a
+   * height, slope and aspect angle in degrees
+   */
 
   .createKernel(function (hArray, metersPerPixel) {
     const { x, y } = this.thread;
@@ -62,11 +69,10 @@ const slope = gpu
  * 360 degrees by white.
  * Used for debugging.
  * @param {width, height, data} image - an image
- * @param {number} metersPerPixel 
+ * @param {number} metersPerPixel
  * @returns {undefined}
  */
 function toHmap(image, metersPerPixel) {
-  
   const heights = toHeights.setOutput([image.width, image.height])(
     image.data,
     image.width
@@ -89,21 +95,21 @@ function toHmap(image, metersPerPixel) {
   document.getElementsByTagName("body")[0].appendChild(render.canvas);
 }
 
-  /**
-   * Takes an image and pixel distance and returns a map of height, slope and
-   * aspect values for each pixel, as well as the minimum, maximum, and range of
-   * those values across the image.
-   * @param {width, height, data} image
-   * @param {number} metersPerPixel meters per pixel
-   * @returns {
-   *  min: number,
-   *  max:number,
-   *  magnitude: number,
-   *  pixels: number[],
-   *  width: number,
-   *  height: number
-   * } heightmap
-   */
+/**
+ * Takes an image and pixel distance and returns a map of height, slope and
+ * aspect values for each pixel, as well as the minimum, maximum, and range of
+ * those values across the image.
+ * @param {width, height, data} image
+ * @param {number} metersPerPixel meters per pixel
+ * @returns {
+ *  min: number,
+ *  max:number,
+ *  magnitude: number,
+ *  pixels: number[],
+ *  width: number,
+ *  height: number
+ * } heightmap
+ */
 function processPixels(image, metersPerPixel) {
   const { width, height, data } = image;
   console.log(height, height / 4);
