@@ -1,4 +1,4 @@
-const locs = [
+const LOCATIONS = [
   {
     name: "Mineral Mountain",
     col: p.siennaBright,
