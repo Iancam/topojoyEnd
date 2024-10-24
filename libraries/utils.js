@@ -1,4 +1,6 @@
 // utils.js;
+
+// #### Tile Functions
 const tilenum_to_lonlat = function (x, y, zoom) {
   const n_tiles = Math.pow(2, zoom);
   const lon_rad = ((x / n_tiles) * 2 - 1) * Math.PI;
@@ -19,6 +21,14 @@ lat2tile = (lat, zoom) =>
       Math.pow(2, zoom)
   );
 
+function getMetersPerPixelAtLatitude(latitude, zoom) {
+  const earthCircumference = 40075016.686; // meters
+  const mapSize = 256 * Math.pow(2, zoom); // pixels
+  const metersPerPixel =
+    (earthCircumference * Math.cos((latitude * Math.PI) / 180)) / mapSize;
+  return metersPerPixel;
+}
+
 function pointToTileFraction(lon, lat, z) {
   var d2r = Math.PI / 180,
     r2d = 180 / Math.PI;
@@ -33,9 +43,15 @@ function pointToTileFraction(lon, lat, z) {
   return [x, y, z];
 }
 
-const earthCircumference = 40075016.686;
-const pixDist = (latitude, zoomlevel) =>
-  (earthCircumference * cos(latitude)) / Math.pow(2, zoomlevel + 8);
+function latLngToScreenPoint(bounds, location, zoom) {
+  const [x0, y0] = bounds;
+  const { lat, long } = location;
+  let [x, y] = pointToTileFraction(lat, long, zoom);
+  [x, y] = [x - x0, y - y0].map((v) => Math.floor(v * 256));
+  return { x, y };
+}
+
+// #### Math Functions
 
 function shortestAngle(start, end) {
   return ((((end - start) % 360) + 540) % 360) - 180;
@@ -73,6 +89,13 @@ function getAngle(v1, v2) {
   return (Math.atan2(v2[1] - v1[1], v2[0] - v1[0]) * 180) / Math.PI;
 }
 
+function aline(x, y, length, angle) {
+  line(x, y, x + length * cos(angle), y + length * sin(angle));
+}
+
+const vert = (angle) => Math.min(...[90, -90].map((v) => Math.abs(angle - v)));
+
+// #### Array Functions
 function windowForEach(array, windowSize, callback, step = 1) {
   let ret = [];
   for (let i = windowSize; i <= array.length; i += step) {
@@ -80,9 +103,3 @@ function windowForEach(array, windowSize, callback, step = 1) {
   }
   return ret;
 }
-
-function aline(x, y, length, angle) {
-  line(x, y, x + length * cos(angle), y + length * sin(angle));
-}
-
-const vert = (angle) => Math.min(...[90, -90].map((v) => Math.abs(angle - v)));
