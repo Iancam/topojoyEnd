@@ -15,12 +15,34 @@ const p = {
   yellow: "#FCD94E",
   ochre: "#D38614",
 };
-const randsFactory = (topo) => (percentOfHeight, tightness) => () =>
+/**
+ * A factory that returns a function which generates random heights for a pixel on a topographic map.
+ *
+ * The returned function takes no arguments and returns a random height that is
+ * sampled from a Gaussian distribution with a mean determined by the percent
+ * of the map's total height and a standard deviation determined by the
+ * tightness of the distribution.
+ *
+ * @param {max: number, magnitude: number} topo - The topographic data containing pixel information as well as summary info on the map.
+ * @param {number} percentOfHeight - The mean height as a percent of the map's total height.
+ * @param {number} gaussDistTightness - The standard deviation of the distribution as a multiple of the total height.
+ * @returns {function(): number} - A function that generates a random height.
+ */
+const randsFactory = (topo) => (percentOfHeight, gaussDistTightness) => () =>
   randomGaussian(
     topo.max - percentOfHeight * topo.magnitude,
-    topo.magnitude / tightness
+    topo.magnitude / gaussDistTightness
   );
 
+/**
+ * Determines the color for a specific pixel on a topographic map based on its height, slope, and aspect.
+ *
+ * Modify this code to customize the color scheme of the map.
+ * @param {Array<number>} coordinates - The x and y coordinates of the pixel.
+ * @param {Object} topo - The topographic data containing pixel information as well as summary info on the map.
+ * @param {Array<Array<number>>} topo.pixels - A 2D array where each element represents [height, slope, aspect] of a pixel.
+ * @returns {string} - The color assigned to the pixel as a hexadecimal or named color.
+ */
 const colorAt = ([x, y], topo) => {
   const [height, slope, aspect] = topo.pixels[y][x];
   const vert = Math.abs(aspect > 90 ? aspect - 180 : aspect) % 180;
