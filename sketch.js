@@ -1,12 +1,27 @@
 p5.disableFriendlyErrors = true;
 
+const MAP_NAME = "snowMesa";
+const TRAILS_SHP_FILE = "COTrails/Trails_COTREX02192019-wgs84.shp";
 async function setup() {
-  const { topo, canvas } = await processImage("leviathan.png");
-  const dims = { bounds: [3314, 6317, 3331, 6327], width: 18, height: 11 };
+  // Load the output of the topojoy tool
+  // https://github.com/Iancam/topojoy
+  const response = await fetch(MAP_NAME + "Bounds.json");
+  const bounds = await response.json();
+  const {
+    box: [x0, y0, x1, y1],
+    width,
+    height,
+    zoom,
+  } = bounds;
+  const { topo, canvas } = await processImage(
+    MAP_NAME + ".png",
+    [x0, y0],
+    zoom
+  );
   createCanvas(canvas.width, canvas.height);
   const curveCount = 2 * (3 / 6) * 100000;
 
-  const genCurve = (v) =>
+  const genCurve = () =>
     makeCurve(
       floor(random(0, topo.width - 1)),
       floor(random(0, topo.height - 1)),
@@ -14,7 +29,7 @@ async function setup() {
       8,
       topo,
       {
-        angleTransform: random([(a) => a + 180, (a) => a]),
+        angleTransform: random([(aspect) => aspect + 180, (aspect) => aspect]),
       }
     );
   const renderCurve = (c) => {
@@ -25,186 +40,6 @@ async function setup() {
   };
   background(p.darkness);
 
-  // times(0.2 * curveCount, genCurve).forEach(renderCurve);
-  textsLayer(topo);
-  // mountainLayer(dims.bounds);
-  // times(0.4 * curveCount, genCurve).forEach(renderCurve);
-  // trailsLayer(topo);
-  // times(0.4 * curveCount, genCurve).forEach(renderCurve);
-}
-
-function getPoints(bounds) {
-  const [x0, y0] = bounds;
-  return locs.map((val) => {
-    const { lat, long } = val;
-    let [x, y] = pointToTileFraction(lat, long, 14);
-    [x, y] = [x - x0, y - y0].map((v) => Math.floor(v * 256));
-    return { ...val, x, y };
-  });
-}
-
-function makeCurve(
-  x,
-  y,
-  length,
-  step_length,
-  topo,
-  options = { angleTransform: (a) => a }
-) {
-  let ret = [[x, y, topo.pixels[y][x][2]]];
-  let last = (array) => array[array.length - 1];
-  for (let i = 0; i < length; i++) {
-    const [h, s, a] = topo.pixels[y]?.[x] || [undefined, undefined, undefined];
-    const [, , lastAspect] = last(ret);
-    const heightScalar = 1; //- scaledH(topo)(h);
-    const aspect = radians(
-      lerpAngle(lastAspect, options.angleTransform(a, [h, s, a]), 0.7)
-    );
-    if (!a) {
-      break;
-    }
-    const x_step = heightScalar * step_length * cos(aspect);
-    const y_step = heightScalar * step_length * sin(aspect);
-    x = floor(x + x_step);
-    y = floor(y + y_step);
-    ret.push([x, y, degrees(aspect)]);
-  }
-  return ret;
-}
-
-function drawCurve(curve, weight) {
-  noFill();
-  strokeWeight(weight);
-  beginShape();
-  curve.forEach(([x, y]) => curveVertex(x, y));
-  endShape();
-}
-
-async function processImage(url) {
-  const img = await new Promise((resolve, reject) => {
-    const image = new Image();
-    image.src = url;
-
-    image.onload = (ev) => {
-      // document.getElementById("sketchy").appendChild(image);
-      resolve(image);
-    };
-  });
-
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  canvas.width = img.width;
-  canvas.height = img.height;
-  ctx.drawImage(img, 0, 0);
-  const pixels = ctx.getImageData(0, 0, img.width, img.height);
-  const { lat } = tilenum_to_lonlat(1657, 3158, 13);
-  const topo = processPixels(pixels, pixDist(lat, 14));
-  return { topo, canvas };
-}
-
-function fillText(
-  topo,
-  inpText,
-  alpha,
-  size,
-  pred,
-  bbox = [0, 0, width, height],
-  margin = 40
-) {
-  textSize(size);
-  noStroke();
-  let words = inpText.split(/\s/).reverse();
-  let y = bbox[1] + margin;
-  let x = bbox[0] + margin;
-  let word = words.pop() + " ";
-  let wordWidth;
-  while (word && y < bbox[3] - margin) {
-    wordWidth = Math.ceil(textWidth(word)) + 10;
-    [x, y] = [Math.floor(x), Math.round(y)];
-    if (pred(topo, x, y, wordWidth)) {
-      word.split("").forEach((char) => {
-        const pixel = topo.pixels[y][x];
-        if (!pixel) return;
-        const [h, s, aspect] = pixel;
-        const vert = Math.abs(aspect > 90 ? aspect - 180 : aspect) % 180;
-        const brightness = vert / 90;
-        const col = color(
-          res(chroma(colorAt([x, y], topo)).brighten((brightness * s) / 70))
-        );
-        col.setAlpha(alpha);
-        fill(col);
-        push();
-        const jitter = random(-s * 0.01, s * 0.01);
-        console.log(jitter);
-        translate(x + jitter, y + jitter);
-        rotate(radians(aspect / 45));
-        text(char, 0, 0);
-        pop();
-        const charLen = textWidth(char);
-        x += Math.ceil(charLen);
-      });
-      // text(word, x, y);
-      word = words.length ? words.pop() + " " : undefined;
-    } else x += wordWidth;
-
-    if (x > bbox[2] - margin - wordWidth) {
-      y += size;
-      x = bbox[0] + margin;
-    }
-  }
-}
-
-function textsLayer(topo) {
-  textFont("Courier");
-  const predicate = (topo, x, y, wordWidth) => {
-    const translate = (percentOfHeight) =>
-      topo.max - percentOfHeight * topo.magnitude;
-    const pix1 = topo.pixels[y]?.[x];
-    const pix2 = topo.pixels[y]?.[Math.floor(x + wordWidth)];
-    if (x + wordWidth + 80 > topo.width) return;
-    if (!pix1 || !pix2) return;
-    const [h1] = pix1;
-    const [h2] = pix2;
-
-    const [hmax, hmin] = [0.43, 0.7].map(translate);
-    return random() > 0.2 && h1 < hmax && h1 > hmin && h2 < hmax && h2 > hmin;
-  };
-  textAlign(CENTER, CENTER);
-  const alpha = 128;
-
-  fill(...res(chroma(p.aquamarine).darken(2)), alpha);
-  fillText(
-    topo,
-    texts.HalfMountain + "\n" + texts.netherlands,
-    alpha,
-    16 * 2,
-
-    predicate,
-    [0, 0, width / 3, height]
-  );
-  fillText(
-    topo,
-    texts.sangaha + "\n" + texts.mangala,
-    alpha,
-    16 * 2,
-
-    predicate,
-    [(2 * width) / 3, 0, width, height]
-  );
-}
-function mountainLayer(bounds) {
-  textSize(32 * 1.5);
-  textFont("Copperplate-Light");
-  textAlign(CENTER, CENTER);
-  const pts = getPoints(bounds);
-  pts.forEach((pt) => {
-    textFont(pt.font || "Copperplate-Light");
-    fill(res(chroma.scale(["#FCD94E", pt.col])(0.7)));
-    text(pt.name, pt.x, pt.y);
-  });
-}
-function trailsLayer(topo) {
-  // ## TRAIL NAMES ##
   const ts = 16 * 1.5;
   textSize(ts);
   textFont("Courier");
@@ -222,32 +57,111 @@ function trailsLayer(topo) {
     "Machin",
     "Wason",
   ];
-  Object.entries(trails)
-    .filter(([name]) => !exclude.some((drop) => name.includes(drop)))
-    .forEach(([name, coords]) => {
-      const mid = floor(coords.length / 2);
-      const [x, y] = coords[mid];
-      name.split(" ").join("\n");
-      text(name.split(" ").join("\n"), x, y);
-    });
 
-  // ## TRAIL LINES ##
-  const slopeScale = chroma.scale([p.yellow, "red"]);
-  Object.values(trails).forEach((coords) => {
-    coords.forEach(([x, y], i) => {
-      if (x > topo.width || y > topo.height) return;
-      const [, slope] = topo.pixels[y][x];
-      stroke(...res(slopeScale(slope / 60)), 155);
+  // times(0.2 * curveCount, genCurve).forEach(renderCurve);
+  // textsLayer(topo);
+  // mountainLayer(dims.bounds);
+  // times(0.4 * curveCount, genCurve).forEach(renderCurve);
+  // trails comes from trailsData.js
+  const trails = await getTrails(TRAILS_SHP_FILE, bounds);
+  trailsLayer(topo, trails, exclude);
+  // times(0.4 * curveCount, genCurve).forEach(renderCurve);
+}
 
-      drawCurve(
-        makeCurve(x, y, abs(randomGaussian(8, 3)), 4, topo, {
-          angleTransform: (() => {
-            let counter = i;
-            return (a) => getAngle([x, y], coords[counter++] || [0, 0]);
-          })(),
-        }),
-        1.5
-      );
-    });
+/**
+ * Creates a curve that meanders through the terrain, with control over aspect, slope, and height of the curve.
+ * @param {number} x x-coordinate of the starting point
+ * @param {number} y y-coordinate of the starting point
+ * @param {number} length The length of the curve in steps
+ * @param {number} step_length The length of each step of the curve
+ * @param {object} topo The terrain object
+ * @param {object} options An object with an optional `angleTransform` method.
+ *  `angleTransform` takes the current aspect of the curve, and an array of [height, slope, aspect1],
+ *  and returns the new aspect of the curve.
+ *  The `angleTransform` method is called with the current aspect of the curve as the first argument,
+ *  and the array of [height, slope, aspect1] as the second argument.
+ *  The `angleTransform` method is expected to return the new aspect of the curve.
+ * @returns {Array<Array<number>>} The curve as an array of [x, y, aspect] points.
+ */
+function makeCurve(
+  x,
+  y,
+  length,
+  step_length,
+  topo,
+  options = { angleTransform: (a) => a }
+) {
+  let curvePoints = [[x, y, topo.pixels[y][x][2]]];
+  let last = (array) => array[array.length - 1];
+  for (let i = 0; i < length; i++) {
+    const [height, slope, aspect1] = topo.pixels[y]?.[x] || [
+      undefined,
+      undefined,
+      undefined,
+    ];
+    const [, , lastAspect] = last(curvePoints);
+    const heightScalar = 1; //- scaledH(topo)(height);
+    const aspect = radians(
+      lerpAngle(
+        lastAspect,
+        options.angleTransform(aspect1, [height, slope, aspect1]),
+        0.7
+      )
+    );
+    if (!aspect1) {
+      break;
+    }
+    const x_step = heightScalar * step_length * cos(aspect);
+    const y_step = heightScalar * step_length * sin(aspect);
+    x = floor(x + x_step);
+    y = floor(y + y_step);
+    curvePoints.push([x, y, degrees(aspect)]);
+  }
+  return curvePoints;
+}
+
+function drawCurve(curve, weight) {
+  noFill();
+  strokeWeight(weight);
+  beginShape();
+  curve.forEach(([x, y]) => curveVertex(x, y));
+  endShape();
+}
+
+/**
+ * Process an image from a url. This function is used to pre-process each of the
+ * map tiles that make up the map. The image is processed into a 3d array, where
+ * each pixel is an array of [height, slope, aspect] as inferred from the image.
+ * The image is also drawn onto a canvas element, which is returned as part of
+ * the object.
+ *
+ * @param {String} url the url to download the image from
+ * @param {Array} [tileX, tileY] the x and y coordinates of the tile in the
+ *     mercator projection
+ * @param {Number} zoom the zoom level of the tile
+ * @returns {Promise<Object>} an object with two properties. The first is `topo`,
+ *     a 3d array representing the height, slope, and aspect of each pixel in the
+ *     image. The second is `canvas`, a canvas element that the image has been
+ *     drawn onto.
+ */
+async function processImage(url, [tileX, tileY], zoom) {
+  const img = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.src = url;
+
+    image.onload = (ev) => {
+      // document.getElementById("sketchy").appendChild(image);
+      resolve(image);
+    };
   });
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  ctx.drawImage(img, 0, 0);
+  const pixels = ctx.getImageData(0, 0, img.width, img.height);
+  const { lat } = tilenum_to_lonlat(tileX, tileY, zoom);
+  const topo = processPixels(pixels, getMetersPerPixelAtLatitude(lat, 14));
+  return { topo, canvas };
 }
