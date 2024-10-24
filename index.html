@@ -16,15 +16,21 @@
       type="text/javascript"
       src="https://cdn.jsdelivr.net/npm/chroma-js@2.1.0/chroma.min.js"
     ></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/lodash@4.17.15/lodash.min.js"
+    ></script>
+
     <script type="text/javascript" src="libraries/p5.js"></script>
-    <script type="text/javascript" src="cdtData.js"></script>
-    <script type="text/javascript" src="trailsData.js"></script>
+    <!-- <script type="text/javascript" src="cdtData.js"></script> -->
+    <script type="text/javascript" src="trails.js"></script>
     <script type="text/javascript" src="backgroundText.js"></script>
     <script type="text/javascript" src="processImage.js"></script>
     <script type="text/javascript" src="libraries/utils.js"></script>
     <script type="text/javascript" src="colorUtils.js"></script>
-    <script type="text/javascript" src="locs.js"></script>
+    <script type="text/javascript" src="locations.js"></script>
 
+    <script type="text/javascript" src="layers.js"></script>
     <script src="sketch.js"></script>
 
     <style>
@@ -41,6 +47,10 @@
       }
     </style>
   </head>
+  <script type="module">
+    import ShpToGeoJson from "https://unpkg.com/shp-to-geojson/dist/shp-to-geojson.browser.js";
+    window.ShpToGeoJson = ShpToGeoJson;
+  </script>
   <div id="sketchy"></div>
   <body></body>
 </html>
