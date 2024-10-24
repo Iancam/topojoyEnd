@@ -2,15 +2,14 @@
 
 ![hero](./image1.jpg)
 
-The project was inspired by my sister's love of geology and the great enjoyment I got from working with a student on [this tutorial](https://tylerxhobbs.com/essays/2020/flow-fields) by Tyler Hobbes. I asked if perlin noise is used to model geographies, can geography be used as perlin noise?
+The project was inspired by my sister's love of geology and the great enjoyment I got from working with a student on [this tutorial](https://tylerxhobbs.com/essays/2020/flow-fields) by Tyler Hobbes. In the tutorial, you create flow fields with computer generated data called perlin noise. I asked if perlin noise is used to model geographies, why can't geographical data be used as perlin noise?
 
-I used [mapbox terrain-rgb](https://docs.mapbox.com/vector-tiles/reference/mapbox-terrain-v2/) to get precise height values. The mapbox plan is free for the scale of requests I was making, but make sure that you cache responses from their server, or you may run up a bill.
+I used [geoJson](https://geojson.io/) to specify the area I wanted, a mountain area where my sister had backpacked as a kid. I used @mapbox/cover handled to handle the output. [mapbox terrain-rgb](https://docs.mapbox.com/vector-tiles/reference/mapbox-terrain-v2/) was used to get precise height values. The mapbox plan is free for the scale of requests I was making, but make sure that you cache responses from their server, or you may run up a bill.
 
-I used [geoJson](https://geojson.io/) to specify the area I wanted, and @mapbox/cover handled to handle the output.
-
+Here's an example of mapbox output. In my code I converted the color of each pixel to the height at that coordinate.
 ![](mbxExample.png)
 
-I covered a large area, so I had to stitch my images together. I ended up using `vips arrayjoin "1657x3158.png 1657x3159.png..." result.png --across 9` instead of `ImageMagick append`, because the later changed my pixel values.
+I covered a large area, so I had to stitch my images together. I ended up using `vips arrayjoin "1657x3158.png 1657x3159.png..." result.png --across 9` instead of `ImageMagick append`, because the latter changed my pixel values.
 
 The above code for downloading and stitching is now a little command line tool which is available [here](https://github.com/Iancam/topoJoy).
 
@@ -68,4 +67,4 @@ const slices = times(nSlices, (i) =>
 
 ![detail](detail.png)
 
-The final image was created using [p5.js](http://p5js.org). Though the process image code hasn't been put in a separate library, it is somewhat reusable. The rest of the code isn't terribly reusable (or well written) but I hope that it can serve as an example for other artists.
+The final image was created using [p5.js](http://p5js.org). Though the process image code hasn't been put in a separate library, it is somewhat reusable. The rest of the code isn't terribly reusable but I hope that it can serve as an example for other artists.
