@@ -102,9 +102,9 @@ function fillText(
 }
 
 /**
- * Given a topology `topo`, a collection of trail coordinates `trails`,
- * and a list of strings `exclude`, this function renders the trails on
- * the canvas.  The trails are rendered in a variety of colors, depending
+ * Given a topology `topo`, and a collection of trail coordinates `trails`
+ * this function renders the trails on
+ * the canvas.  The trails are rendered in a gradient of colors, depending
  * on the slope of the terrain at each point.  The names of the trails
  * are also rendered in the middle of the trail.
  *
@@ -112,19 +112,20 @@ function fillText(
  * @param {Object} trails - A collection of trail coordinates, where each
  *     key is the name of the trail and each value is a list of xy
  *     coordinates.
- * @param {Array<string>} exclude - A list of strings, where each string is
- *     a name of a trail to be excluded from the rendering.
  */
-function trailsLayer(topo, trails, exclude) {
+function trailsLayer(topo, trails) {
   // ## TRAIL NAMES ##
-  Object.entries(trails)
-    .filter(([name]) => !exclude.some((drop) => name.includes(drop)))
-    .forEach(([name, coords]) => {
-      const mid = floor(coords.length / 2);
-      const [x, y] = coords[mid];
-      name.split(" ").join("\n");
-      text(name.split(" ").join("\n"), x, y);
-    });
+  const ts = 16 * 1.5;
+  textSize(ts);
+  textFont("Courier");
+  fill(p.yellow);
+
+  Object.entries(trails).forEach(([name, coords]) => {
+    const mid = floor(coords.length / 2);
+    const [x, y] = coords[mid];
+    name.split(" ").join("\n");
+    text(name.split(" ").join("\n"), x, y);
+  });
 
   // ## TRAIL LINES ##
   const slopeScale = chroma.scale([p.yellow, "red"]);
