@@ -1,9 +1,6 @@
 .env
+.DS_Store
 node_modules
-leviathan*
-snowMesa*
 tiles
-data
 images
-cotrails.josn
-*Data.js
+data
