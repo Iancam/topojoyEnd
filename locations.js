@@ -1,3 +1,6 @@
+/**
+ * These were collected manually from https://geojson.io/
+ */
 const LOCATIONS = [
   {
     name: "Mineral Mountain",
