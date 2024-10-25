@@ -1,3 +1,5 @@
+const N_SLICES = 4;
+
 function initGPU() {
   try {
     return new window.GPU.GPU();
@@ -5,6 +7,7 @@ function initGPU() {
     return new GPU();
   }
 }
+
 const gpu = initGPU();
 const toHeights = gpu
   .createKernel(function hmap(data, width) {
@@ -57,6 +60,18 @@ const slope = gpu
         ? (Math.atan2(dzdy, dzdx) * (180 / Math.PI) + 180) % 360
         : (90 * (d > 0 ? 1 : -1) + 180) % 360;
     return [height, slope, aspect];
+  })
+  .setDynamicOutput(true);
+const extrema_y = gpu
+  .createKernel(function (hArray, height) {
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < height; i++) {
+      const h = hArray[this.thread.x][i];
+      if (h < min) min = h;
+      if (h > max) max = h;
+    }
+    return [min, max];
   })
   .setDynamicOutput(true);
 
@@ -113,23 +128,11 @@ function toHmap(image, metersPerPixel) {
 function processPixels(image, metersPerPixel) {
   const { width, height, data } = image;
   console.log(height, height / 4);
-  const extrema_y = gpu
-    .createKernel(function (hArray, height) {
-      let min = Infinity;
-      let max = -Infinity;
-      for (let i = 0; i < height; i++) {
-        const h = hArray[this.thread.x][i];
-        if (h < min) min = h;
-        if (h > max) max = h;
-      }
-      return [min, max];
-    })
-    .setDynamicOutput(true);
+
   // 139, 988,-3395
-  const nSlices = 4;
-  const step = height / nSlices;
-  const slices = times(nSlices, (i) =>
-    data.slice(i * step * width * 4, (i + 1) * step * width * nSlices)
+  const step = height / N_SLICES;
+  const slices = times(N_SLICES, (i) =>
+    data.slice(i * step * width * 4, (i + 1) * step * width * N_SLICES)
   ).map((data) => {
     const htex = toHeights.setOutput([width, step])(data, width);
     const pixels = slope.setOutput([width, step])(htex, metersPerPixel);
