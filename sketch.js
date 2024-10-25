@@ -21,51 +21,16 @@ async function setup() {
   createCanvas(canvas.width, canvas.height);
   const curveCount = 2 * (3 / 6) * 100000;
 
-  const genCurve = () =>
-    makeCurve(
-      floor(random(0, topo.width - 1)),
-      floor(random(0, topo.height - 1)),
-      random(8, 12),
-      8,
-      topo,
-      {
-        angleTransform: random([(aspect) => aspect + 180, (aspect) => aspect]),
-      }
-    );
-  const renderCurve = (c) => {
-    const col = color(colorAt(c[0], topo));
-    col.setAlpha(128);
-    stroke(col);
-    drawCurve(c, 1.8);
-  };
   background(p.darkness);
 
-  const ts = 16 * 1.5;
-  textSize(ts);
-  textFont("Courier");
-  const exclude = [
-    "Cut-Off",
-    "Twin Peak",
-    "Cutoff",
-    "Lake Fork",
-    "Powderhorn",
-    "East Mineral Creek",
-    "Halfmoon",
-    "San Luis",
-    "Plateau",
-    "Whee",
-    "Machin",
-    "Wason",
-  ];
-
-  // times(0.2 * curveCount, genCurve).forEach(renderCurve);
+  // times(0.2 * curveCount, genCurve(topo)).forEach(colorAndDrawCurve(topo));
   // textsLayer(topo);
   // mountainLayer(dims.bounds);
-  // times(0.4 * curveCount, genCurve).forEach(renderCurve);
-  // trails comes from trailsData.js
+  // times(0.4 * curveCount, genCurve(topo)).forEach(colorAndDrawCurve(topo));
+  // getTrails comes from trails.js
   const trails = await getTrails(TRAILS_SHP_FILE, bounds);
-  trailsLayer(topo, trails, exclude);
-  // times(0.4 * curveCount, genCurve).forEach(renderCurve);
+  trailsLayer(topo, trails);
+  times(0.4 * curveCount, genCurve(topo)).forEach(colorAndDrawCurve(topo));
 }
 
 /**
@@ -127,6 +92,25 @@ function drawCurve(curve, weight) {
   curve.forEach(([x, y]) => curveVertex(x, y));
   endShape();
 }
+
+const genCurve = (topo) => () =>
+  makeCurve(
+    floor(random(0, topo.width - 1)),
+    floor(random(0, topo.height - 1)),
+    random(8, 12),
+    8,
+    topo,
+    {
+      angleTransform: random([(aspect) => aspect + 180, (aspect) => aspect]),
+    }
+  );
+
+const colorAndDrawCurve = (topo) => (c) => {
+  const col = color(colorAt(c[0], topo));
+  col.setAlpha(128);
+  stroke(col);
+  drawCurve(c, 1.8);
+};
 
 /**
  * Process an image from a url. This function is used to pre-process each of the
